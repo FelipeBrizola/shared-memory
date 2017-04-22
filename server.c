@@ -6,7 +6,6 @@
 #define SHMSZ     27
 
 main() {
-    char c;
     int shmid;
     key_t key;
     char *shm, *s;
@@ -34,23 +33,21 @@ main() {
     }
 
     /*
-     * Now put some things into the memory for the
-     * other process to read.
-     */
-    s = shm;
-
-    for (c = 'a'; c <= 'z'; c++)
-        *s++ = c;
-    *s = NULL;
-
-    /*
      * Finally, we wait until the other process 
      * changes the first character of our memory
      * to '*', indicating that it has read what 
      * we put there.
      */
-    while (*shm != '*')
-        sleep(1);
+    while (*shm != '*') {
+    /*
+     * Now read what the server put in the memory.
+     */
+    for (s = shm; *s != NULL; s++)
+        putchar(*s);
+        putchar('\n');
+    }
+
+    sleep(1);
 
     exit(0);
 }

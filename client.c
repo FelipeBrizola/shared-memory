@@ -5,13 +5,18 @@
 #include <sys/ipc.h>
 #include <sys/shm.h>
 #include <stdio.h>
+#include <string.h>
+
 
 #define SHMSZ     27
 
-main() {
+int main(int argc, char** argv) {
+    int i;
     int shmid;
     key_t key;
     char *shm, *s;
+
+    char *message = argv[1];
 
     /*
      * We need to get the segment named
@@ -36,18 +41,21 @@ main() {
     }
 
     /*
-     * Now read what the server put in the memory.
+     * Now put some things into the memory for the
+     * other process to read.
      */
-    for (s = shm; *s != NULL; s++)
-        putchar(*s);
-    putchar('\n');
+    s = shm;
+
+    for (i = 0; i <= strlen(message); i ++)
+        *s++ = message[i];
+    *s = NULL;
 
     /*
      * Finally, change the first character of the 
      * segment to '*', indicating we have read 
      * the segment.
      */
-    *shm = '*';
+    *shm = 'A';
 
     exit(0);
 }
