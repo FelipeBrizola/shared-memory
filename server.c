@@ -1,4 +1,3 @@
-
 #include <sys/types.h>
 #include <sys/ipc.h>
 #include <sys/shm.h>
@@ -14,17 +13,17 @@ char SEM_NAME[]= "semaphore";
 sem_t *mutex;
 sem_t *mutexAst;
 
+
 void createMutex() {
-	//create & initialize semaphore
-  	mutex = sem_open(SEM_NAME,O_CREAT, 0644, 1);
+
+  	mutex = sem_open(SEM_NAME, O_CREAT, 0644, 1);
   	if (mutex == SEM_FAILED) {
     	perror("Erro ao criar semafóro");
       	sem_unlink(SEM_NAME);
       	exit(-1);
 	}
 
-	//create & initialize semaphore
-  	mutexAst = sem_open(SEM_NAME,O_CREAT, 0644,1);
+  	mutexAst = sem_open(SEM_NAME, O_CREAT, 0644, 1);
   	if (mutexAst == SEM_FAILED) {
     	perror("Erro ao criar semafóro");
       	sem_unlink(SEM_NAME);
@@ -37,42 +36,46 @@ int main() {
   	key_t key;
   	char *shm,*s;
   
-  	//name the shared memory segment
+  	// Key da memoria compartilhada
   	key = 1000;
 
+	// Cria mutexs de tamanho 1
   	createMutex();
 
-  	//create the shared memory segment with this key
-  	shmid = shmget(key,SHMSZ,IPC_CREAT|0666);
-  	if(shmid < 0) {
+  	// Cria segmento de memoria compartilhada
+    // passando passando identificador, tamanho da memoria, criacao com permissao de escrita
+  	shmid = shmget(key, SHMSZ, IPC_CREAT | 0666);
+  	if (shmid < 0) {
       perror("Erro ao criar segmento de memória compartilhada");
       exit(-1);
     }
 
-  	//attach this segment to virtual memory
-  	shm = shmat(shmid,NULL,0);
+  	// Anexa a memoria virtual
+  	shm = shmat(shmid, NULL, 0);
 
-
-  	//start writing into memory
-  	s = shm;
+	// server fica em loop infinito
   	while (1) {
+		
+		// Na primeira passada o fluxo nao entra no while.
+		// escreve o lixo que tem na memoria, se a mesma nao for zerada
+		// sem_wait(mutex) fecha o semaforo e com isso processo fica bloqueado
 
-		while(sem_trywait(mutexAst) < 0) {
+		while(sem_trywait(mutex) < 0) {
       		sleep(1);
     	}
 
-		// le memoria compartilhada ate encontrar NULL
+		// Le da memoria compartilhada,
+		// escreve no terminal.
+		// repete ate encontrar NULL
 		for (s = shm; *s != NULL; s++)
             putchar(*s);
         putchar('\n');
 		
 		sem_wait(mutex);
 
+		// Quando client realiza sem_post(mutex) o processo continua daonde tinha parado.
 		sem_post(mutexAst);
   }
 
-  sem_close(mutex);
-  sem_unlink(SEM_NAME);
-  shmctl(shmid, IPC_RMID, 0);
-  _exit(0);
+  exit(0);
 }
