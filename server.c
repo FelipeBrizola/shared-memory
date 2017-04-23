@@ -11,17 +11,11 @@
 #define SHMSZ 27
 char SEM_NAME[]= "semaphore";
 
-int main() {
-  int shmid;
-  key_t key;
-  char *shm,*s;
-  sem_t *mutex;
-  sem_t *mutexAst;
+sem_t *mutex;
+sem_t *mutexAst;
 
-  	//name the shared memory segment
-  	key = 1000;
-
-  	//create & initialize semaphore
+void createMutex() {
+	//create & initialize semaphore
   	mutex = sem_open(SEM_NAME,O_CREAT, 0644, 1);
   	if (mutex == SEM_FAILED) {
     	perror("Erro ao criar semafóro");
@@ -36,6 +30,17 @@ int main() {
       	sem_unlink(SEM_NAME);
       	exit(-1);
 	}
+}
+
+int main() {
+  	int shmid;
+  	key_t key;
+  	char *shm,*s;
+  
+  	//name the shared memory segment
+  	key = 1000;
+
+  	createMutex();
 
   	//create the shared memory segment with this key
   	shmid = shmget(key,SHMSZ,IPC_CREAT|0666);
