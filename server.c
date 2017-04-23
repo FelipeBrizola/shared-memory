@@ -1,59 +1,66 @@
+
 #include <sys/types.h>
 #include <sys/ipc.h>
 #include <sys/shm.h>
 #include <stdio.h>
 #include <semaphore.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 
-#define SHMSZ     27
+#define SHMSZ 27
+char SEM_NAME[]= "vik";
 
-struct Memory {
-    char *shm;
-    sem_t semaphore;
-};
+int main() {
+  char ch;
+  int shmid;
+  key_t key;
+  char *shm,*s;
+  sem_t *mutex;
 
-main() {
-    int shmid;
-    key_t key;
-    char  *s;
+  	//name the shared memory segment
+  	key = 1000;
 
-    struct Memory *memory;
+  	//create & initialize semaphore
+  	mutex = sem_open(SEM_NAME,O_CREAT,0644,1);
+  	if(mutex == SEM_FAILED) {
+    	perror("unable to create semaphore");
+      	sem_unlink(SEM_NAME);
+      	exit(-1);
+	}
 
-    sem_init(&memory->semaphore, 0, 1);
-
-    /*
-     * We'll name our shared memory segment
-     * "5678".
-     */
-    key = 5678;
-
-    /*
-     * Create the segment.
-     */
-    if ((shmid = shmget(key, SHMSZ, IPC_CREAT | 0666)) < 0) {
-        perror("shmget");
-        exit(1);
-    }
-    
-
-    /*
-     * Now we attach the segment to our data space.
-     */
-    if ((memory = (struct Memory *) shmat(shmid, NULL, 0)) == (char *) -1) {
-        perror("shmat");
-        exit(1);
+  	//create the shared memory segment with this key
+  	shmid = shmget(key,SHMSZ,IPC_CREAT|0666);
+  	if(shmid < 0) {
+      perror("failure in shmget");
+      exit(-1);
     }
 
-    sem_wait(&memory->semaphore);
+  	//attach this segment to virtual memory
+  	shm = shmat(shmid,NULL,0);
 
-    while (1) {
-        if (sem_trywait(&memory->semaphore) < 0) {
-            printf("tamo dentro");
-            for (s = memory; *s != NULL; s++)
-                putchar(*s);
-            putchar('\n');
-        }
+  	//start writing into memory
+  	s = shm;
 
-    }  
+  	while (1) {
+		char *message;
 
-    exit(0);
+		while(*shm != '*') {
+      		printf("VOU DORMIR%s\n", message);
+      		sleep(1);
+    	}
+
+		for (s = shm; *s != NULL; s++)
+            putchar(*s);
+        putchar('\n');
+		
+		sem_wait(mutex);
+		printf("minha mensagem");
+		*shm = '*';
+  }
+
+  sem_close(mutex);
+  sem_unlink(SEM_NAME);
+  shmctl(shmid, IPC_RMID, 0);
+  _exit(0);
 }

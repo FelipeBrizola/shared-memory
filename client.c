@@ -1,66 +1,57 @@
-/*
- * shm-client - client program to demonstrate shared memory.
- */
+
 #include <sys/types.h>
 #include <sys/ipc.h>
 #include <sys/shm.h>
 #include <stdio.h>
-#include <string.h>
 #include <semaphore.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 
-
-#define SHMSZ     27
-
-struct Memory {
-    char *shm;
-    sem_t semaphore;
-};
+#define SHMSZ 27
+char SEM_NAME[]= "vik";
 
 int main(int argc, char** argv) {
-    int i;
+    char ch;
     int shmid;
     key_t key;
-    char *s;
+    char *shm,*s;
+    sem_t *mutex;
+
     char *message = argv[1];
 
-    struct Memory *memory;
+    //name the shared memory segment
+    key = 1000;
 
-    /*
-     * We need to get the segment named
-     * "5678", created by the server.
-     */
-    key = 5678;
-
-    /*
-     * Locate the segment.
-     */
-    if ((shmid = shmget(key, SHMSZ, 0666)) < 0) {
-        perror("shmget");
-        exit(1);
+  //create & initialize existing semaphore
+    mutex = sem_open(SEM_NAME,0,0644,0);
+    if(mutex == SEM_FAILED) {
+        perror("reader:unable to execute semaphore");
+        sem_close(mutex);
+        exit(-1);
     }
 
-    /*
-     * Now we attach the segment to our data space.
-     */
-    if ((memory = (struct Memory *) shmat(shmid, NULL, 0)) == (char *) -1) {
-        perror("shmat");
-        exit(1);
+    //create the shared memory segment with this key
+    shmid = shmget(key,SHMSZ,0666);
+    if(shmid < 0) {
+        perror("reader:failure in shmget");
+        exit(-1);
     }
 
-    /*
-     * Now put some things into the memory for the
-     * other process to read.
-     */
-    s = memory;
+    //attach this segment to virtual memory
+    shm = shmat(shmid,NULL,0);
 
-    sem_wait(&memory->semaphore);
-
-    for (i = 0; i < strlen(message); i += 1)
+    //start reading
+    s = shm;
+  
+    for (int i = 0; i < strlen(message); i += 1)
         *s++ = message[i];
+        
+    sem_post(mutex);
 
     *s = NULL;
 
-    sem_post(&memory->semaphore);
-
+    //once done signal exiting of reader:This can be replaced by another semaphore
+    *shm = '*';
     exit(0);
 }
