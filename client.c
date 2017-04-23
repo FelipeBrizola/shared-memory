@@ -9,24 +9,17 @@
 
 #define SHMSZ 27
 char SEM_NAME[]= "semaphore";
-sem_t *mutex;
-sem_t *mutexAst;
+sem_t *mutexProcess;
+
 
 // Tenta criar semaforo passando SEM_NAME.
 // Como semaforo ja existe e o parametro O_EXCL esta ativo, busca semaforo.
 void getMutex() {
-    
-    mutex = sem_open(SEM_NAME, O_EXCL, 0644, 0);
-    if(mutex == SEM_FAILED) {
-        perror("Erro no semafóro");
-        sem_close(mutex);
-        exit(-1);
-    }
 
-    mutexAst = sem_open(SEM_NAME, O_EXCL, 0644, 0);
-    if(mutexAst == SEM_FAILED) {
+    mutexProcess = sem_open(SEM_NAME, O_EXCL, 0644, 0);
+    if(mutexProcess == SEM_FAILED) {
         perror("Erro no semafóro");
-        sem_close(mutexAst);
+        sem_close(mutexProcess);
         exit(-1);
     }
 }
@@ -60,7 +53,7 @@ int main(int argc, char** argv) {
         *s++ = message[i];
         
     // libera semaforo para server escrever message
-    sem_post(mutex);
+    sem_post(mutexProcess);
 
     // sempre termina message com NULL;
     *s = NULL;

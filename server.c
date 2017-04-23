@@ -9,22 +9,13 @@
 
 #define SHMSZ 27
 char SEM_NAME[]= "semaphore";
-
-sem_t *mutex;
-sem_t *mutexAst;
+sem_t *mutexProcess;
 
 
 void createMutex() {
 
-  	mutex = sem_open(SEM_NAME, O_CREAT, 0644, 1);
-  	if (mutex == SEM_FAILED) {
-    	perror("Erro ao criar semafóro");
-      	sem_unlink(SEM_NAME);
-      	exit(-1);
-	}
-
-  	mutexAst = sem_open(SEM_NAME, O_CREAT, 0644, 1);
-  	if (mutexAst == SEM_FAILED) {
+  	mutexProcess = sem_open(SEM_NAME, O_CREAT, 0644, 1);
+  	if (mutexProcess == SEM_FAILED) {
     	perror("Erro ao criar semafóro");
       	sem_unlink(SEM_NAME);
       	exit(-1);
@@ -56,13 +47,8 @@ int main() {
 	// server fica em loop infinito
   	while (1) {
 		
-		// Na primeira passada o fluxo nao entra no while.
-		// escreve o lixo que tem na memoria, se a mesma nao for zerada
-		// sem_wait(mutex) fecha o semaforo e com isso processo fica bloqueado
-
-		while(sem_trywait(mutexAst) < 0) {
-      		sleep(1);
-    	}
+		// fecha semaforo do processo. processo fica bloqueado
+		sem_wait(mutexProcess);
 
 		// Le da memoria compartilhada,
 		// escreve no terminal.
@@ -70,11 +56,6 @@ int main() {
 		for (s = shm; *s != NULL; s++)
             putchar(*s);
         putchar('\n');
-		
-		sem_wait(mutex);
-
-		// Quando client realiza sem_post(mutex) o processo continua daonde tinha parado.
-		sem_post(mutexAst);
   }
 
   exit(0);
