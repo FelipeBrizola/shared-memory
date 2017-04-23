@@ -1,4 +1,3 @@
-
 #include <sys/types.h>
 #include <sys/ipc.h>
 #include <sys/shm.h>
@@ -13,8 +12,10 @@ char SEM_NAME[]= "semaphore";
 sem_t *mutex;
 sem_t *mutexAst;
 
+// Tenta criar semaforo passando SEM_NAME.
+// Como semaforo ja existe e o parametro O_EXCL esta ativo, busca semaforo.
 void getMutex() {
-    //create & initialize existing semaphore
+    
     mutex = sem_open(SEM_NAME, O_EXCL, 0644, 0);
     if(mutex == SEM_FAILED) {
         perror("Erro no semafóro");
@@ -22,7 +23,6 @@ void getMutex() {
         exit(-1);
     }
 
-    //create & initialize existing semaphore
     mutexAst = sem_open(SEM_NAME, O_EXCL, 0644, 0);
     if(mutexAst == SEM_FAILED) {
         perror("Erro no semafóro");
@@ -30,7 +30,6 @@ void getMutex() {
         exit(-1);
     }
 }
-
 
 int main(int argc, char** argv) {
     int shmid;
@@ -44,21 +43,23 @@ int main(int argc, char** argv) {
 
     getMutex();
 
-    //create the shared memory segment with this key
+    // busca segmento de memoria compartilhada
+    // passando passando identificador, tamanho da memoria e permissao de escrita
     shmid = shmget(key, SHMSZ, 0666);
-    if(shmid < 0) {
-        perror("Erro ao criar segmento de memória compartilhada");
+    if (shmid < 0) {
+        perror("Erro ao buscar segmento de memória compartilhada");
         exit(-1);
     }
 
-    //attach this segment to virtual memory
+    // Anexa a a memoria virtual
     shm = shmat(shmid, NULL, 0);
-
-    s = shm;
   
+    // escreve na memoria compartilhada
+    s = shm;
     for (int i = 0; i < strlen(message); i += 1)
         *s++ = message[i];
         
+    // libera semaforo para server escrever message
     sem_post(mutex);
 
     // sempre termina message com NULL;
