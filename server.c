@@ -60,7 +60,7 @@ int main() {
 		// escreve o lixo que tem na memoria, se a mesma nao for zerada
 		// sem_wait(mutex) fecha o semaforo e com isso processo fica bloqueado
 
-		while(sem_trywait(mutex) < 0) {
+		while(sem_trywait(mutexAst) < 0) {
       		sleep(1);
     	}
 
