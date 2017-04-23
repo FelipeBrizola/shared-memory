@@ -6,17 +6,24 @@
 #include <sys/shm.h>
 #include <stdio.h>
 #include <string.h>
+#include <semaphore.h>
 
 
 #define SHMSZ     27
+
+struct Memory {
+    char *shm;
+    sem_t semaphore;
+};
 
 int main(int argc, char** argv) {
     int i;
     int shmid;
     key_t key;
-    char *shm, *s;
-
+    char *s;
     char *message = argv[1];
+
+    struct Memory *memory;
 
     /*
      * We need to get the segment named
@@ -35,7 +42,7 @@ int main(int argc, char** argv) {
     /*
      * Now we attach the segment to our data space.
      */
-    if ((shm = shmat(shmid, NULL, 0)) == (char *) -1) {
+    if ((memory = (struct Memory *) shmat(shmid, NULL, 0)) == (char *) -1) {
         perror("shmat");
         exit(1);
     }
@@ -44,18 +51,16 @@ int main(int argc, char** argv) {
      * Now put some things into the memory for the
      * other process to read.
      */
-    s = shm;
+    s = memory;
 
-    for (i = 0; i <= strlen(message); i ++)
+    sem_wait(&memory->semaphore);
+
+    for (i = 0; i < strlen(message); i += 1)
         *s++ = message[i];
+
     *s = NULL;
 
-    /*
-     * Finally, change the first character of the 
-     * segment to '*', indicating we have read 
-     * the segment.
-     */
-    *shm = 'A';
+    sem_post(&memory->semaphore);
 
     exit(0);
 }

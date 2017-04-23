@@ -2,13 +2,23 @@
 #include <sys/ipc.h>
 #include <sys/shm.h>
 #include <stdio.h>
+#include <semaphore.h>
 
 #define SHMSZ     27
+
+struct Memory {
+    char *shm;
+    sem_t semaphore;
+};
 
 main() {
     int shmid;
     key_t key;
-    char *shm, *s;
+    char  *s;
+
+    struct Memory *memory;
+
+    sem_init(&memory->semaphore, 0, 1);
 
     /*
      * We'll name our shared memory segment
@@ -23,31 +33,27 @@ main() {
         perror("shmget");
         exit(1);
     }
+    
 
     /*
      * Now we attach the segment to our data space.
      */
-    if ((shm = shmat(shmid, NULL, 0)) == (char *) -1) {
+    if ((memory = (struct Memory *) shmat(shmid, NULL, 0)) == (char *) -1) {
         perror("shmat");
         exit(1);
     }
 
-    /*
-     * Finally, we wait until the other process 
-     * changes the first character of our memory
-     * to '*', indicating that it has read what 
-     * we put there.
-     */
-    while (*shm != '*') {
-    /*
-     * Now read what the server put in the memory.
-     */
-    for (s = shm; *s != NULL; s++)
-        putchar(*s);
-        putchar('\n');
-    }
+    sem_wait(&memory->semaphore);
 
-    sleep(1);
+    while (1) {
+        if (sem_trywait(&memory->semaphore) < 0) {
+            printf("tamo dentro");
+            for (s = memory; *s != NULL; s++)
+                putchar(*s);
+            putchar('\n');
+        }
+
+    }  
 
     exit(0);
 }
