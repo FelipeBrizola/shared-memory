@@ -9,22 +9,30 @@
 #include <fcntl.h>
 
 #define SHMSZ 27
-char SEM_NAME[]= "vik";
+char SEM_NAME[]= "semaphore";
 
 int main() {
-  char ch;
   int shmid;
   key_t key;
   char *shm,*s;
   sem_t *mutex;
+  sem_t *mutexAst;
 
   	//name the shared memory segment
   	key = 1000;
 
   	//create & initialize semaphore
-  	mutex = sem_open(SEM_NAME,O_CREAT,0644,1);
-  	if(mutex == SEM_FAILED) {
-    	perror("unable to create semaphore");
+  	mutex = sem_open(SEM_NAME,O_CREAT, 0644, 1);
+  	if (mutex == SEM_FAILED) {
+    	perror("Erro ao criar semafóro");
+      	sem_unlink(SEM_NAME);
+      	exit(-1);
+	}
+
+	//create & initialize semaphore
+  	mutexAst = sem_open(SEM_NAME,O_CREAT, 0644,1);
+  	if (mutexAst == SEM_FAILED) {
+    	perror("Erro ao criar semafóro");
       	sem_unlink(SEM_NAME);
       	exit(-1);
 	}
@@ -32,31 +40,30 @@ int main() {
   	//create the shared memory segment with this key
   	shmid = shmget(key,SHMSZ,IPC_CREAT|0666);
   	if(shmid < 0) {
-      perror("failure in shmget");
+      perror("Erro ao criar segmento de memória compartilhada");
       exit(-1);
     }
 
   	//attach this segment to virtual memory
   	shm = shmat(shmid,NULL,0);
 
+
   	//start writing into memory
   	s = shm;
-
   	while (1) {
-		char *message;
 
-		while(*shm != '*') {
-      		printf("VOU DORMIR%s\n", message);
+		while(sem_trywait(mutexAst) < 0) {
       		sleep(1);
     	}
 
+		// le memoria compartilhada ate encontrar NULL
 		for (s = shm; *s != NULL; s++)
             putchar(*s);
         putchar('\n');
 		
 		sem_wait(mutex);
-		printf("minha mensagem");
-		*shm = '*';
+
+		sem_post(mutexAst);
   }
 
   sem_close(mutex);
